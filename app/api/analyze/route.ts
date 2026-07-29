@@ -5,7 +5,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const { resumeText } = await req.json();
+    const { resumeText, jobDescription } = await req.json();
 
     if (!resumeText) {
       return NextResponse.json(
@@ -14,7 +14,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = `
+    const hasJD = jobDescription && jobDescription.trim().length > 0;
+
+    const prompt = hasJD
+      ? `
+You are an expert ATS resume reviewer and recruiter. Compare the following resume against the specific job description provided.
+
+Resume:
+${resumeText}
+
+Job Description:
+${jobDescription}
+
+Provide:
+1. A match score out of 100 (how well this resume fits THIS specific job)
+2. Top 3 strengths that align with this job
+3. Top 3 gaps or improvements needed for THIS job
+4. Missing keywords from the job description that should appear in the resume
+
+Respond ONLY in this JSON format, no extra text:
+{
+  "atsScore": number,
+  "strengths": ["...", "...", "..."],
+  "improvements": ["...", "...", "..."],
+  "missingKeywords": ["...", "...", "..."],
+  "hasJobMatch": true
+}
+`
+      : `
 You are an expert ATS resume reviewer. Analyze the following resume and provide:
 1. An ATS score out of 100
 2. Top 3 strengths
@@ -29,7 +56,8 @@ Respond ONLY in this JSON format, no extra text:
   "atsScore": number,
   "strengths": ["...", "...", "..."],
   "improvements": ["...", "...", "..."],
-  "missingKeywords": ["...", "...", "..."]
+  "missingKeywords": ["...", "...", "..."],
+  "hasJobMatch": false
 }
 `;
 
